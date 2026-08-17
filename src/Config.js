@@ -12,11 +12,36 @@ var CONFIG = {
   SHEET_ACTIVITY: 'Activity Log',
   SHEET_STATE: '_State', // hidden bookkeeping tab (processed message/event ids)
 
-  // How far back the very first run looks in Gmail. After that, each daily run
-  // only scans messages newer than the last successful run (minus a 2-day
-  // overlap so nothing slips through).
-  INITIAL_LOOKBACK_DAYS: 90,
+  // How far back the very first run looks in Gmail. The backfill is chunked
+  // and re-schedules itself, so it survives Apps Script's ~6-minute execution
+  // limit even at 2 years. Daily runs afterwards only scan messages newer than
+  // the last successful run (minus a 2-day overlap so nothing slips through).
+  INITIAL_LOOKBACK_DAYS: 730,
   INCREMENTAL_OVERLAP_DAYS: 2,
+
+  // Backfill chunking: how many threads to process per execution, and how much
+  // wall-clock time to use before saving a cursor and re-scheduling.
+  BACKFILL_CHUNK_THREADS: 25,
+  BACKFILL_TIME_BUDGET_MS: 4.5 * 60 * 1000,
+
+  // ---- Optional LLM-assisted extraction ----
+  // Keys are set via: Project Settings (gear icon) -> Script Properties.
+  // Both are optional; with neither key set the script is fully deterministic.
+  //
+  //   ANTHROPIC_API_KEY -> used ONLY for the one-time historical backfill,
+  //                        with a top-tier model for maximum accuracy on
+  //                        2 years of mail. Delete the key after the backfill
+  //                        if you want to be sure it's never billed again.
+  //   GEMINI_API_KEY    -> used for the daily runs. Google AI Studio keys
+  //                        (aistudio.google.com) have a free tier that easily
+  //                        covers a few recruiter emails per day.
+  LLM: {
+    BACKFILL_MODEL: 'claude-opus-5',    // Anthropic, one-time backfill
+    DAILY_MODEL: 'gemini-2.5-flash',  // Google, free tier, daily runs
+    MAX_TOKENS: 1024,
+    // How much thread text to send per call (chars). Keeps cost bounded.
+    MAX_INPUT_CHARS: 12000
+  },
 
   // Calendar window scanned for interview events: past 60 days + next 90 days.
   CALENDAR_PAST_DAYS: 60,

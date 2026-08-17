@@ -62,7 +62,9 @@ function initStateSheet(ss) {
 }
 
 function saveState(ss, state) {
-  PropertiesService.getScriptProperties().setProperty('LAST_RUN_TIME', state.lastRunTime);
+  if (state.lastRunTime) {
+    PropertiesService.getScriptProperties().setProperty('LAST_RUN_TIME', state.lastRunTime);
+  }
   if (state.newIds.length) {
     var sheet = ss.getSheetByName(CONFIG.SHEET_STATE);
     var rows = state.newIds.map(function (id) { return [id]; });

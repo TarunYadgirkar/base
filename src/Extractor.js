@@ -7,9 +7,12 @@
 
 /**
  * @param {GmailThread} thread
+ * @param {boolean} isBackfill picks the LLM provider (Anthropic for backfill,
+ *   Gemini for daily runs); with no matching API key set, extraction is
+ *   regex-only either way.
  * @return {Object|null} extracted record, or null if nothing usable.
  */
-function extractFromThread(thread) {
+function extractFromThread(thread, isBackfill) {
   var messages = thread.getMessages();
   var me = Session.getActiveUser().getEmail().toLowerCase();
 
@@ -50,6 +53,13 @@ function extractFromThread(thread) {
     interviewDates: [], // filled in by CalendarMatcher
     nextInterview: null
   };
+
+  // Optional LLM pass: fills fields the regexes missed, corrects the stage,
+  // and vetoes threads that only *look* recruiting-related.
+  if (llmAvailable(isBackfill)) {
+    var llm = llmExtract(fullText, isBackfill);
+    if (!mergeLlmIntoRecord(record, llm)) return null;
+  }
 
   if (!record.company && !record.recruiterEmail) return null;
   return record;
