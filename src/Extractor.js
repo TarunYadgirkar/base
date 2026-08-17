@@ -14,7 +14,7 @@
  */
 function extractFromThread(thread, isBackfill) {
   var messages = thread.getMessages();
-  var me = Session.getActiveUser().getEmail().toLowerCase();
+  var me = myEmail();
 
   // The "recruiter" is the most recent external sender; if Dad started the
   // thread, fall back to the first external recipient.

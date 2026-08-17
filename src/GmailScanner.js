@@ -35,12 +35,35 @@ function findRecruitingThreads(lastRunIso) {
   return threads.filter(isRecruitingThread);
 }
 
+/**
+ * The mailbox owner's address, lowercased and cached for the execution.
+ * Session.getActiveUser() needs the userinfo.email scope; if it's missing or
+ * blocked, fall back to the Gmail aliases list rather than crashing the run.
+ */
+var MY_EMAIL_ = null;
+function myEmail() {
+  if (MY_EMAIL_ !== null) return MY_EMAIL_;
+  var email = '';
+  try {
+    email = Session.getActiveUser().getEmail() || '';
+  } catch (e) {
+    try {
+      var aliases = GmailApp.getAliases();
+      email = aliases.length ? aliases[0] : '';
+    } catch (e2) {
+      email = '';
+    }
+  }
+  MY_EMAIL_ = email.toLowerCase();
+  return MY_EMAIL_;
+}
+
 /** Heuristic relevance check on a thread's participants + text. */
 function isRecruitingThread(thread) {
   var messages = thread.getMessages();
   if (!messages.length) return false;
 
-  var me = Session.getActiveUser().getEmail().toLowerCase();
+  var me = myEmail();
   var externalSenders = messages
     .map(function (m) { return parseAddress(m.getFrom()).email.toLowerCase(); })
     .filter(function (e) { return e && e !== me; });
