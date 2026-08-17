@@ -39,6 +39,26 @@ function checkKeyShape_(name, expectedPrefix) {
     Logger.log('  Note: stripped ' + (raw.length - clean.length) +
       ' whitespace/invisible character(s) from the pasted value.');
   }
+
+  // Real API keys are pure ASCII. Look-alike Unicode (Cyrillic а/е/о/с/х,
+  // the multiplication sign, smart quotes) sneaks in when a key is copied
+  // from a browser-translated page or a notes app — the key looks perfect
+  // but the provider rejects it.
+  var suspect = [];
+  for (var i = 0; i < clean.length; i++) {
+    var code = clean.charCodeAt(i);
+    if (code > 127) {
+      suspect.push('position ' + (i + 1) + ' = "' + clean.charAt(i) +
+        '" (U+' + ('0000' + code.toString(16).toUpperCase()).slice(-4) + ')');
+    }
+  }
+  if (suspect.length) {
+    Logger.log('  *** CORRUPTED KEY: ' + suspect.length + ' non-ASCII character(s) ***');
+    suspect.forEach(function (s) { Logger.log('      ' + s); });
+    Logger.log('      These are look-alike characters, not real letters. Turn off');
+    Logger.log('      page translation, re-copy the key with the provider\'s copy');
+    Logger.log('      button, and paste it straight into Script Properties.');
+  }
 }
 
 function testAnthropic_() {
