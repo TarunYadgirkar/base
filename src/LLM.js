@@ -44,8 +44,17 @@ var EXTRACTION_PROMPT =
   'Use null for anything not present. If the thread is not about recruiting the mailbox owner ' +
   '(newsletters, job-board digests, sales outreach), set is_recruiting to false.\n\nThread:\n';
 
+/**
+ * Reads a Script Property, trimming stray whitespace/newlines — pasting a key
+ * into the properties table very often picks up a trailing space or newline,
+ * which providers reject as an invalid key.
+ */
 function getProp_(name) {
-  return PropertiesService.getScriptProperties().getProperty(name);
+  var value = PropertiesService.getScriptProperties().getProperty(name);
+  if (!value) return value;
+  // API keys never contain whitespace or zero-width characters, so strip any
+  // that a copy/paste dragged along (​-‍ zero-width, ﻿ BOM).
+  return value.replace(/[\s​-‍﻿]/g, '');
 }
 
 /** Which LLM (if any) applies right now. @param {boolean} isBackfill */
