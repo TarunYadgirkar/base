@@ -147,6 +147,14 @@ function geminiExtract_(text) {
   return part && part.text ? JSON.parse(part.text) : null;
 }
 
+/**
+ * Set when a provider rejects our credentials (401/403). The backfill checks
+ * this and halts rather than importing two years of mail with the AI pass
+ * silently failing on every thread.
+ */
+var LLM_AUTH_FAILED_ = null;
+function llmAuthFailure() { return LLM_AUTH_FAILED_; }
+
 /** POST with retries on 429/5xx (rate limits, overload). Returns body text or null. */
 function fetchWithRetry_(url, options) {
   var delays = [0, 2000, 5000, 12000];
@@ -155,7 +163,13 @@ function fetchWithRetry_(url, options) {
     var resp = UrlFetchApp.fetch(url, options);
     var code = resp.getResponseCode();
     if (code >= 200 && code < 300) return resp.getContentText();
-    if (code !== 429 && code < 500) { // 4xx other than 429: not retryable
+    if (code === 401 || code === 403) {
+      LLM_AUTH_FAILED_ = 'HTTP ' + code + ' from ' + url.split('?')[0].split('/')[2] +
+        ': ' + resp.getContentText().slice(0, 300);
+      Logger.log('LLM auth rejected — ' + LLM_AUTH_FAILED_);
+      return null;
+    }
+    if (code !== 429 && code < 500) { // other 4xx: not retryable
       Logger.log('LLM API error ' + code + ': ' + resp.getContentText().slice(0, 500));
       return null;
     }

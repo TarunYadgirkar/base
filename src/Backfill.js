@@ -52,6 +52,24 @@ function continueBackfill() {
     });
 
     cursor.offset += page.length;
+
+    // If the AI key was rejected, stop immediately. Finishing a 2-year import
+    // with the LLM pass failing on every thread would mean redoing it later.
+    if (llmAuthFailure()) {
+      appendActivity(ss, newActivity);
+      saveState(ss, state);
+      props.setProperty('BACKFILL_CURSOR', JSON.stringify(cursor));
+      removeBackfillTriggers_();
+      Logger.log('BACKFILL HALTED — the AI provider rejected the API key.');
+      Logger.log('  ' + llmAuthFailure());
+      Logger.log('  Nothing was lost: progress is saved at thread ' + cursor.offset + '.');
+      Logger.log('  Fix the key (run testApiKeys to diagnose), then run ' +
+        'continueBackfill to resume, or startBackfill to redo from scratch.');
+      Logger.log('  To import without AI instead, clear the API key property ' +
+        'and run continueBackfill.');
+      return;
+    }
+
     if (page.length < CONFIG.BACKFILL_CHUNK_THREADS) { exhausted = true; break; }
   }
 
